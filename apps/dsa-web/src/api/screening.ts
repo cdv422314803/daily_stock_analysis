@@ -296,6 +296,9 @@ export type ScreeningHistoryResponse = {
   enabled: boolean;
   runs: ScreeningRunSummary[];
   runCount: number;
+  total?: number;
+  limit?: number;
+  offset?: number;
 };
 
 export type ScreeningRunDetail = ScreeningRunSummary & {
@@ -396,10 +399,11 @@ export const screeningApi = {
     return toCamelCase<ScreeningScreenTaskStatus>(response.data);
   },
 
-  async getHistory(payload: { limit?: number; strategy?: string; market?: string } = {}): Promise<ScreeningHistoryResponse> {
+  async getHistory(payload: { limit?: number; offset?: number; strategy?: string; market?: string } = {}): Promise<ScreeningHistoryResponse> {
     const response = await apiClient.get<Record<string, unknown>>('/api/v1/screening/history', {
       params: {
         limit: payload.limit ?? 20,
+        offset: payload.offset ?? 0,
         strategy: payload.strategy || undefined,
         market: payload.market || undefined,
       },

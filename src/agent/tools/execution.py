@@ -199,12 +199,24 @@ def serialize_tool_result(result: Any) -> str:
     return str(result)
 
 
+def _coerce_stock_code_argument(value: Any) -> Any:
+    """Turn JSON numeric stock codes into text before any ``str.strip`` call."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return value
+
+
 def _normalize_tool_stock_code(value: Any, registry: Optional[Any] = None) -> Any:
     """Canonicalize a stock argument for tool scope and cache keys.
 
     An injected registry preserves exact parser INDEX canonicals. Direct calls
     without one retain the legacy stock/HK normalization path.
     """
+    value = _coerce_stock_code_argument(value)
     if not isinstance(value, str):
         return value
 
@@ -344,6 +356,7 @@ def _validated_chat_tool_target(stock_scope: Any, value: str, registry: Any) -> 
     from src.agent.stock_scope import StockIdentity
     from src.services.stock_list_parser import _normalize_index_key, parse_analysis_target
 
+    value = _coerce_stock_code_argument(value)
     if registry is None or not isinstance(value, str) or not value.strip():
         raise ValueError("Tool target cannot be validated")
     target = parse_analysis_target(value, registry)
@@ -484,12 +497,15 @@ def execute_runner_tool_call(
 ) -> tuple[Any, str, bool, float, bool, Optional[Dict[str, Any]]]:
     """Execute a single tool call using the legacy runner semantics."""
     t0 = time.time()
+    arguments = tool_call.arguments
+    if isinstance(arguments, dict) and "stock_code" in arguments:
+        arguments = dict(arguments, stock_code=_coerce_stock_code_argument(arguments.get("stock_code")))
     guard_result, access = _resolve_tool_stock_access(
-        tool_registry, tool_call.name, tool_call.arguments, stock_scope,
+        tool_registry, tool_call.name, arguments, stock_scope,
     )
     identity = access.identity if access is not None else None
     cache_key = (None if guard_result is not None and getattr(stock_scope, "strict", False)
-                 else _build_tool_cache_key(tool_call.name, tool_call.arguments,
+                 else _build_tool_cache_key(tool_call.name, arguments,
                                             stock_scope=stock_scope, resolved_identity=identity))
     if guard_result is not None:
         dur = round(time.time() - t0, 2)
@@ -515,7 +531,6 @@ def execute_runner_tool_call(
         return tool_call, non_retriable_tool_results[cache_key], False, dur, True, None
 
     context_token = None
-    arguments = tool_call.arguments
     if identity is not None:
         arguments = dict(arguments, stock_code=identity.stock_code)
         context_token = bind_tool_execution_context(ToolAccessContext(

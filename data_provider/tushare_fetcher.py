@@ -94,13 +94,26 @@ def _resolve_tushare_http_url() -> Optional[str]:
     return url
 
 
+def _tushare_append_api_name() -> bool:
+    """部分第三方网关把接口名放在路径上，例如 ``http://host/daily``。"""
+    raw = os.getenv("TUSHARE_HTTP_APPEND_API_NAME", "")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class _TushareHttpClient:
     """Lightweight Tushare Pro client that does not require the tushare SDK."""
 
-    def __init__(self, token: str, timeout: int = 30, api_url: str = "http://api.tushare.pro") -> None:
+    def __init__(
+        self,
+        token: str,
+        timeout: int = 30,
+        api_url: str = "http://api.tushare.pro",
+        append_api_name: bool = False,
+    ) -> None:
         self._token = token
         self._timeout = timeout
         self._api_url = api_url
+        self._append_api_name = append_api_name
 
     def query(self, api_name: str, fields: str = "", **kwargs) -> pd.DataFrame:
         req_params = {
@@ -109,7 +122,10 @@ class _TushareHttpClient:
             "params": kwargs,
             "fields": fields,
         }
-        res = requests.post(self._api_url, json=req_params, timeout=self._timeout)
+        request_url = self._api_url
+        if self._append_api_name:
+            request_url = f"{self._api_url.rstrip('/')}/{api_name}"
+        res = requests.post(request_url, json=req_params, timeout=self._timeout)
         if res.status_code != 200:
             raise Exception(f"Tushare API HTTP {res.status_code}")
 
@@ -205,9 +221,14 @@ class TushareFetcher(BaseFetcher):
         留空或不设置则保持官方默认地址，行为与历史版本完全一致。
         """
         api_url = _resolve_tushare_http_url()
+        append_api_name = _tushare_append_api_name()
         if api_url:
             logger.info("Tushare 使用自定义接入地址: %s", api_url)
-            client = _TushareHttpClient(token=token, api_url=api_url)
+            client = _TushareHttpClient(
+                token=token,
+                api_url=api_url,
+                append_api_name=append_api_name,
+            )
         else:
             client = _TushareHttpClient(token=token)
         logger.debug("Tushare API client configured for direct HTTP calls")
@@ -323,8 +344,9 @@ class TushareFetcher(BaseFetcher):
             self._date_list_end = requested_end_date
             return self.date_list
 
+        opened = pd.to_numeric(df_cal["is_open"], errors="coerce").fillna(0).eq(1)
         trade_dates = sorted(
-            df_cal[df_cal["is_open"] == 1]["cal_date"].astype(str).tolist(),
+            df_cal.loc[opened, "cal_date"].astype(str).tolist(),
             reverse=True,
         )
         self.date_list = trade_dates

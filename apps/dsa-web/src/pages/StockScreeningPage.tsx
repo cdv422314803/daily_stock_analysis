@@ -40,12 +40,13 @@ import {
   type ScreeningStrategy,
 } from '../api/screening';
 import { formatParsedApiError, getParsedApiError, toApiErrorMessage, type ParsedApiError } from '../api/error';
-import { AppPage, Button, InlineAlert, Select } from '../components/common';
+import { AppPage, Button, InlineAlert, Pagination, Select } from '../components/common';
 
 const MARKETS = [{ id: 'cn', label: 'A 股' }];
 const SCREEN_TASK_STORAGE_KEY = 'dsa.screening.activeScreenTask.v1';
 const SCREEN_TASK_POLL_INTERVAL_MS = 2000;
 const CUSTOM_STRATEGY_OPTION_VALUE = '__custom_strategy__';
+const HISTORY_PAGE_SIZE = 20;
 const STRATEGY_CATEGORY_LABELS: Record<string, string> = {
   framework: '综合',
   income: '收益',
@@ -870,6 +871,8 @@ const StockScreeningPage: React.FC = () => {
   const [loading, setLoading] = useState(Boolean(restoredTask?.taskId));
   const [enabling, setEnabling] = useState(false);
   const [historyRuns, setHistoryRuns] = useState<ScreeningRunSummary[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [restoreResolved, setRestoreResolved] = useState(() => !restoredTask?.runId);
@@ -918,12 +921,32 @@ const StockScreeningPage: React.FC = () => {
     setExpandedCode(nextCandidates[0]?.code ?? null);
   }, []);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (page = 1) => {
+    const requestedPage = Math.max(1, page);
     setHistoryLoading(true);
     setHistoryError('');
     try {
-      const result = await screeningApi.getHistory({ limit: 10 });
-      setHistoryRuns(result.runs || []);
+      const result = await screeningApi.getHistory({
+        limit: HISTORY_PAGE_SIZE,
+        offset: (requestedPage - 1) * HISTORY_PAGE_SIZE,
+      });
+      const runs = result.runs || [];
+      const total = result.total ?? runs.length;
+      const totalPages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
+      const resolvedPage = Math.min(requestedPage, totalPages);
+      if (resolvedPage !== requestedPage) {
+        const retried = await screeningApi.getHistory({
+          limit: HISTORY_PAGE_SIZE,
+          offset: (resolvedPage - 1) * HISTORY_PAGE_SIZE,
+        });
+        setHistoryRuns(retried.runs || []);
+        setHistoryTotal(retried.total ?? total);
+        setHistoryPage(resolvedPage);
+        return;
+      }
+      setHistoryRuns(runs);
+      setHistoryTotal(total);
+      setHistoryPage(requestedPage);
     } catch (err) {
       setHistoryError(toApiErrorMessage(err, '历史记录加载失败'));
     } finally {
@@ -1305,6 +1328,7 @@ const StockScreeningPage: React.FC = () => {
         if (task.result) {
           applyScreenResult(task.result);
           setError('');
+          void loadHistory(1);
           // 持久化 runId：刷新后优先从 history API 恢复结果，而非依赖内存 task
           const completedRunId = task.result.runId || screenMeta?.runId;
           if (completedRunId) {
@@ -1380,7 +1404,7 @@ const StockScreeningPage: React.FC = () => {
         window.clearTimeout(timer);
       }
     };
-  }, [activeTaskId, applyScreenResult, restoreResolved]);
+  }, [activeTaskId, applyScreenResult, loadHistory, restoreResolved]);
 
   const handleEnable = async () => {
     setEnabling(true);
@@ -2142,7 +2166,7 @@ const StockScreeningPage: React.FC = () => {
           <button
             type="button"
             className="text-xs font-medium text-cyan transition-colors hover:text-foreground"
-            onClick={() => void loadHistory()}
+            onClick={() => void loadHistory(1)}
             disabled={historyLoading}
           >
             {historyLoading ? '加载中...' : '刷新'}
@@ -2184,6 +2208,12 @@ const StockScreeningPage: React.FC = () => {
             ))}
           </div>
         )}
+        <Pagination
+          className="mt-3"
+          currentPage={historyPage}
+          totalPages={Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE))}
+          onPageChange={(page) => void loadHistory(page)}
+        />
       </section>
     </AppPage>
   );

@@ -170,6 +170,26 @@ class TestTushareFetcherCustomHttpUrl(unittest.TestCase):
             timeout=30,
         )
 
+    def test_query_appends_api_name_when_path_style_enabled(self) -> None:
+        config = SimpleNamespace(tushare_token="demo-token")
+        env = {
+            "TUSHARE_HTTP_URL": "http://gw.example.com",
+            "TUSHARE_HTTP_APPEND_API_NAME": "true",
+        }
+
+        with patch("data_provider.tushare_fetcher.get_config", return_value=config), \
+                patch.dict("os.environ", env):
+            fetcher = TushareFetcher()
+
+        response = MagicMock(
+            status_code=200,
+            text=json.dumps({"code": 0, "data": {"fields": ["ts_code"], "items": []}}),
+        )
+        with patch("data_provider.tushare_fetcher.requests.post", return_value=response) as post_mock:
+            fetcher._api.daily(ts_code="000001.SZ")
+
+        self.assertEqual(post_mock.call_args.args[0], "http://gw.example.com/daily")
+
 
 if __name__ == "__main__":
     unittest.main()

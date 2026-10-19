@@ -161,6 +161,8 @@ DSA 中存在两类用途不同的策略文件：
 
 即使 `shrink_pullback`、`volume_breakout` 同名，两者也使用不同目录、Schema 和 loader，不会相互覆盖。筛选策略可通过 `analysis_skills` 声明下一阶段建议使用的分析 skill；Web 的“进一步深度分析”会显式携带这些 skill。未声明映射的筛选策略继续使用用户当前选择或默认分析策略，不做含义不可靠的强行映射。
 
+`low_position_chip_inflow`（低位筹码入场）要求近阶段低位、当天收阳、量比至少 2、换手率至少 2%，并把市盈率限制在 0 到 50、市净率限制在 0.8 到 8。全市场快照没有筹码分布，低波动只是集中度近似；策略把后续分析 skill 设为 `bottom_volume`，入选后再核对获利比例、90% 集中度和主力净流入。
+
 ## DSA 原生能力复用
 
 - 行情：日 K 优先调用 DSA `DataFetcherManager`，无结果才进入筛选模块自己的多源 fallback；最终候选继续补 DSA 实时行情。

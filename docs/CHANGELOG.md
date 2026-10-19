@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- [新功能] 新增选股策略「低位筹码入场」：筛近阶段低位、收阳放量、市盈率/市净率与换手率适中的 A 股；筹码健康度在入选后用底部放量分析核对。
+- [改进] 选股历史每页显示 20 条并支持翻页，旧记录继续保留在本地数据库。
+- [修复] 问股工具把模型传来的数字股票代码先转成字符串，避免行情、筹码和新闻查询在 ``strip`` 处失败。
+- [修复] Tushare 交易日历把字符串 `"1"` 也视为开市，避免第三方网关返回文本标记时筹码查询被提前跳过。
+- [改进] Tushare 自定义接入地址可设置 `TUSHARE_HTTP_APPEND_API_NAME=true`，按「基址/接口名」请求第三方网关；官方单地址模式保持不变。
 - [改进] Modelflare 只需 MODELFLARE_KEY，后端、Web、筛选及 Actions 统一自动识别渠道并补齐默认地址与模型，保留显式 YAML／渠道配置优先级和高级渠道 Key 兼容。
 
 - [改进] 单 Modelflare 渠道未填写主模型及渠道模型列表时默认使用 gpt-6.1-sol，只需渠道名与 API Key；三语 README 横幅恢复 720px、图片与文案紧接显示，并在 Modelflare 与 SerpAPI 之间添加分隔线。

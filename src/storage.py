@@ -2739,15 +2739,32 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             )
             return 0
 
+    def count_screening_runs(
+        self,
+        *,
+        strategy: Optional[str] = None,
+        market: Optional[str] = None,
+    ) -> int:
+        """Count stored screening runs. Records are not deleted by listing."""
+        with self.get_session() as session:
+            statement = select(func.count()).select_from(ScreeningRun)
+            if strategy:
+                statement = statement.where(ScreeningRun.strategy == str(strategy).strip())
+            if market:
+                statement = statement.where(ScreeningRun.market == str(market).strip())
+            return int(session.execute(statement).scalar_one() or 0)
+
     def list_screening_runs(
         self,
         *,
         limit: int = 20,
+        offset: int = 0,
         strategy: Optional[str] = None,
         market: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """List recent screening runs as compact summaries."""
         normalized_limit = max(0, min(int(limit), 100))
+        normalized_offset = max(0, int(offset))
         if normalized_limit <= 0:
             return []
 
@@ -2758,7 +2775,9 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             if market:
                 statement = statement.where(ScreeningRun.market == str(market).strip())
             rows = session.execute(
-                statement.order_by(desc(ScreeningRun.created_at), desc(ScreeningRun.id)).limit(normalized_limit)
+                statement.order_by(desc(ScreeningRun.created_at), desc(ScreeningRun.id))
+                .offset(normalized_offset)
+                .limit(normalized_limit)
             ).scalars().all()
             return [self._screening_run_to_dict(row, include_result=False) for row in rows]
 

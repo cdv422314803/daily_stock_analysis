@@ -82,6 +82,25 @@ class TestTushareFetcherFollowUps(unittest.TestCase):
         # Should be Friday (20th), NOT Thursday (19th)
         self.assertEqual(result, "20260320")
 
+    def test_get_trade_time_accepts_string_is_open(self) -> None:
+        """Gateways may return is_open as '1' instead of int 1."""
+        fetcher = self._make_fetcher()
+        fetcher._api.trade_cal.return_value = pd.DataFrame(
+            {
+                "cal_date": ["20261014", "20261015"],
+                "is_open": ["1", "1"],
+            }
+        )
+
+        with patch.object(
+            fetcher,
+            "_get_china_now",
+            side_effect=[datetime(2026, 10, 15, 10, 0)] * 2,
+        ), patch.object(fetcher, "_check_rate_limit"):
+            result = fetcher.get_trade_time(early_time="00:00", late_time="19:00")
+
+        self.assertEqual(result, "20261014")
+
     def test_get_trade_time_trade_day_before_data_ready_returns_previous(self) -> None:
         """On a trade day within the early-late window, should return the
         previous trade date (data not ready yet for today)."""

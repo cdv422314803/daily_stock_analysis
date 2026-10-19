@@ -97,6 +97,7 @@ def test_bundled_strategies_are_loaded_from_the_internal_package() -> None:
         "blue_chip_income",
         "capital_heat",
         "dual_low",
+        "low_position_chip_inflow",
         "low_volatility_quality",
         "momentum_quality",
         "oversold_reversal",

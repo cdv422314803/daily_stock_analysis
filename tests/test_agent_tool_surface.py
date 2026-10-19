@@ -497,6 +497,30 @@ def test_normalize_tool_stock_code_registry_seam() -> None:
     assert _normalize_tool_stock_code("sh000016", IndexRegistry([])) == "000016"
     # Direct call without a registry keeps the legacy stock identity byte-for-byte.
     assert _normalize_tool_stock_code("000016.SH") == "000016"
+    assert _normalize_tool_stock_code(601918) == "601918"
+
+
+def test_runner_coerces_numeric_stock_code_before_handler() -> None:
+    from types import SimpleNamespace
+
+    from src.agent.tools.execution import execute_runner_tool_call
+
+    seen = []
+    registry = _single_tool_registry(
+        ToolDefinition(
+            name="get_realtime_quote",
+            description="quote",
+            parameters=[ToolParameter(name="stock_code", type="string", description="code")],
+            handler=lambda stock_code: seen.append(stock_code) or {"price": 1},
+            policy=ToolPolicy.declared(read_only=True),
+        )
+    )
+    result = execute_runner_tool_call(
+        tool_call=SimpleNamespace(name="get_realtime_quote", arguments={"stock_code": 601918}),
+        tool_registry=registry,
+    )
+    assert seen == ["601918"]
+    assert result[2] is True
 
 
 def test_guard_tool_stock_scope_registry_injection_seam() -> None:

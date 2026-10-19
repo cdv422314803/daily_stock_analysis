@@ -918,20 +918,31 @@ class ScreeningService:
         self,
         *,
         limit: int = 20,
+        offset: int = 0,
         strategy: str = "",
         market: str = "",
     ) -> Dict[str, Any]:
         _ensure_screening_enabled(self.config)
         db_manager = self._require_history_database()
+        strategy_filter = _env_text(strategy) or None
+        market_filter = _env_text(market) or None
         runs = db_manager.list_screening_runs(
             limit=limit,
-            strategy=_env_text(strategy) or None,
-            market=_env_text(market) or None,
+            offset=offset,
+            strategy=strategy_filter,
+            market=market_filter,
+        )
+        total = db_manager.count_screening_runs(
+            strategy=strategy_filter,
+            market=market_filter,
         )
         return {
             "enabled": True,
             "runs": runs,
             "run_count": len(runs),
+            "total": total,
+            "limit": max(0, min(int(limit), 100)),
+            "offset": max(0, int(offset)),
         }
 
     def history_detail(self, run_id: str) -> Dict[str, Any]:

@@ -281,6 +281,7 @@ def screening_screen(
 @router.get("/history")
 def screening_history(
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     strategy: str = Query("", max_length=64),
     market: str = Query("", max_length=16),
     config: Config = Depends(get_config_dep),
@@ -288,6 +289,7 @@ def screening_history(
 ) -> Dict[str, Any]:
     return _service(config, db_manager).history(
         limit=limit,
+        offset=offset,
         strategy=strategy,
         market=market,
     )

@@ -1,0 +1,105 @@
+# Derived from AlphaSift revision 9f522747caafd3c0b1ddb7e14d5cf44c8580b6cf.
+# Licensed under Apache-2.0 and modified for daily_stock_analysis.
+# 低位筹码入场：低位、收阳放量、估值和换手适中。
+# 全市场快照没有筹码分布，低波动只是集中度近似；
+# 入选后用底部放量分析核对获利比例与 90% 集中度。
+name: low_position_chip_inflow
+display_name: 低位筹码入场
+description: 近阶段低位、当天收阳放量，且市盈率、市净率和换手率处在可接受区间。筹码是否健康需在入选后用底部放量分析确认。
+version: "1.1"
+category: reversal
+tags: [reversal, volume, low_position, value]
+analysis_skills: [bottom_volume]
+style:
+  risk_profile: balanced
+  holding_period: swing
+  execution_style: low_position_inflow
+  market_regime: [range, reversal]
+  capital_profile: medium_liquidity
+  ui_badge: 低位
+
+screening:
+  enabled: true
+  market_scope: [cn]
+  hard_filters:
+    exclude_st: true
+    price_min: 3.0
+    price_max: 55.0
+    amount_min: 80000000
+    market_cap_min: 3000000000
+    pe_ttm_min: 0
+    pe_ttm_max: 50
+    pb_min: 0.8
+    pb_max: 8.0
+    turnover_rate_min: 2.0
+    volume_ratio_min: 2.0
+    change_pct_min: 0.0
+    change_pct_max: 5.0
+    change_60d_min: -35.0
+    change_60d_max: 15.0
+    rsi_status_whitelist: [oversold, neutral]
+    pullback_to_ma20_pct_min: -12.0
+    pullback_to_ma20_pct_max: 3.0
+    breakout_20d_pct_max: -10.0
+    range_20d_pct_max: 25.0
+    body_pct_min: 0.3
+    volume_ratio_20d_min: 1.5
+    volume_ratio_20d_max: 3.5
+    volatility_20d_pct_max: 28.0
+    max_drawdown_20d_pct_min: -22.0
+    atr_20_pct_max: 5.5
+  tech_weight: 0.35
+  factor_weights:
+    reversal: 0.24
+    stability: 0.26
+    activity: 0.18
+    value: 0.16
+    liquidity: 0.10
+    momentum: 0.06
+  scoring_profile:
+    reversal_ideal_change_pct: 1.5
+    reversal_chase_start_pct: 4.5
+    reversal_chase_penalty_slope: 12.0
+    rsi_oversold_bonus: 8.0
+    activity_ideal_volume_ratio: 2.5
+    activity_ideal_turnover_rate: 4.0
+    activity_high_volume_ratio: 4.0
+    activity_high_turnover_rate: 10.0
+    momentum_chase_start_pct: 4.0
+    momentum_chase_penalty_slope: 14.0
+    momentum_60d_overheat_pct: 12.0
+    stability_hot_change_pct: 5.0
+    stability_high_volatility_pct: 24.0
+    stability_high_turnover_rate: 10.0
+    stability_high_volume_ratio: 4.0
+    stability_max_drawdown_floor_pct: -18.0
+    stability_high_atr_pct: 5.0
+  risk_profile:
+    chase_change_pct: 5.0
+    abnormal_volume_ratio: 4.5
+    high_turnover_rate: 10.0
+    high_pb: 6.0
+  portfolio_profile:
+    max_same_bucket: 1
+    concentration_penalty: 4.0
+    buckets:
+      金融: [券商, 银行, 保险]
+      AI算力: [AI算力, 算力, 数据中心, 服务器, 光模块]
+      新能源: [新能源, 光伏, 锂电, 电池, 储能]
+      机器人: [机器人, 减速器, 执行器, 伺服]
+  scorecard_profile:
+    value_quality_value_min: 60.0
+    value_quality_stability_min: 60.0
+    value_quality_bonus: 1.6
+    controlled_reversal_bonus: 2.0
+    capital_confirmed_bonus: 1.6
+    volume_spike_ratio: 4.5
+    hot_money_penalty: 2.0
+  ranking_hints: |
+    在低位、收阳且成交放大的候选中，优先关注：
+    1. 现价仍低于近 20 日高点约 10% 以上，60 日涨幅不高
+    2. 量比大约 2 到 3.5，换手率大约 2% 到 10%，不是天量爆炒
+    3. 市盈率 0 到 50、市净率 0.8 到 8，亏损和过贵的往后排
+    4. 近 20 日波动可控。深度分析时核对筹码：获利比例约 40% 到 70%、90% 集中度低于 10% 更理想；获利比例高于 90% 或集中度高于 25% 视为不健康
+    5. 当天和近 5 日主力净流入都为正再考虑买入
+  max_output: 8
